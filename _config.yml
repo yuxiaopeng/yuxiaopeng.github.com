@@ -1,11 +1,10 @@
 # Basic
-title: Vno Jekyll
-subtitle: A blog-orientation theme for Jekyll
-welcome_message: <a href="https://github.com/onevcat/vno-jekyll" target="_blank">Download the theme</a>
-description: Vno Jekyll is a port of my Ghost theme vno.
-creator: <a href="http://onev.cat">@onevcat</a>
+title: Roc's Blog
+subtitle: 求索
+welcome_message: Hi
+creator: <a href="http://yuxiaopeng.com">@yuxiaopeng</a>
 
-url: "http://vno.onevcat.com"
+url: "http://yuxiaopeng.com"
 
 permalink: /:year/:month/:title/
 
@@ -16,17 +15,16 @@ redcarpet:
   extensions: ["no_intra_emphasis", "fenced_code_blocks", "autolink", "strikethrough", "superscript", tables]
 
 # supported colors: blue, green, purple, red, orange or slate. If you need clear, leave it empty.
-cover_color: red
+cover_color: slate
 
-# The blog button should not be removed.
 blog_button:
-    title: Blog
-    description: Visit blog
+    title: 博客
+    description: 访问博客
 
-# Navigation buttons in the front page.
 nav:
-    - {title: Projects, description: My Projects, url: 'http://project.onevcat.com'}
-    # - {title: Another Button, description: A button, url: 'http://example.com'}
+    #- {title: 项目, description: 我的项目, url: ''}
+    #- {title: 关于, description: 了解更多关于我, url: ''}
+    #- {title: 订阅, description: 邮件订阅本站, url: ''}
 
 # Pagination
 gems: [jekyll-paginate]
@@ -35,18 +33,15 @@ paginate_path: "page/:num/"
 
 # Comment
 comment:
-    disqus: vno-jekyll
-    # duoshuo: 
-    
+    duoshuo: yuxiaopeng
 # Social
 social:
-    weibo: onevcat
-    github: onevcat
-    twitter: onevcat
-    gplus: 107108267983477358170
-    mail: onev@onevcat.com
+    weibo: rooc
+    github: yuxiaopeng
+    twitter: xiaopengyu
+    mail: uxiaopeng@gmail.com
 
 # Google Analytics
 ga:
-    # id: your_ga_id
-    # host: your_host
+    id: UA-45732020-1
+    host: yuxiaopeng.com

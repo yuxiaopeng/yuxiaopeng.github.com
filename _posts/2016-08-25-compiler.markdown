@@ -1,0 +1,165 @@
+---
+layout: post
+title: 编译器
+date: 2016-08-25 14:01
+tags: 
+---
+
+![](/assets/images/2016/08/DragonMedium.png)
+
+写了这么久程序你是否真的知道自己的代码是如何转换为可执行文件在操作系统上运行的？这是我最近写代码时的常常思考的问题，所以就有了这篇探究原理的文章。本文旨在记录人个对`Mac OS`、`iOS`系统编译器相关原理在学习中的理解和对相关概念的摘录，如有不妥之处欢迎指正。
+
+## 1. 编译器？
+
+[编译器](https://zh.wikipedia.org/wiki/%E7%B7%A8%E8%AD%AF%E5%99%A8)（Compiler），是一种计算机程序，它会将用某种编程语言写成的源代码（原始语言），转换成另一种编程语言（目标语言）。其中原始语言可以是C、C++、Java、Objective-C、Swift等，目标语言则通常是机器码。它主要的目的是将便于人编写，阅读，维护的高级计算机语言所写作的源代码程序，翻译为计算机能解读、运行的低阶机器语言的程序，也就是**可执行文件**。
+
+一个现代编译器的主要工作流程如下：
+
+`源代码（source code）` → `预处理器（preprocessor）` → `编译器（compiler）` → `汇编程序（assembler）` → `目标代码（object code）` → `链接器（Linker）` → `可执行文件（executables）`， 最后打包好的文件就可以给电脑运行了。
+
+## 2. [编译器结构](http://www.aosabook.org/en/llvm.html)（三段式设计 three phase design）
+
+根据编译器工作流程延伸出传统的静态编译器（如大多C编译器）设计中最流行的`三段式设计`，分为前端（Frontend），优化器（Optimizer），后端（Backend）（见下图）。前端解析源代码，检查错误，将输入代码变成特定语言的抽象语法书（AST）。AST可以被转化成新的模式，以便优化，优化器和后端基于这些代码运行。
+
+![](/assets/images/2016/08/simple_compiler.png)
+
+优化器做出一系列的变换来优化代码的运行时，比如去除那些独立于语言和处理目标的冗余计算。后端（常称为代码生成器）把代码映射到目标指令集上，除了确保代码正确，它还负责一些特定架构之上的特殊优化。后端一般包括指令选择，寄存器的分配，指令计划。此处涉及到计算机硬件的概念不再展开。[参考](https://en.wikipedia.org/wiki/Computer_architecture)
+
+对于解释器和JIT编译器，这个模型也同样适用。Java虚拟机(JVM)也是这种模型的一个实现，它将Java的字节码用作前端和优化器之间的接口。
+
+下面分析一下三段式设计的优点：
+
+![](/assets/images/2016/08/retargetable_compiler.png)
+
+* 有了这个设计，支持一个新语言(e.g., Algol or BASIC)只需要实现一个新的前端，而已有的优化器和后端都可复用。如果这些部件没有分离，那么就要从头开始，因此实现`M`种语言的`N`个目标需要`N * M`个编译器。
+
+* 三阶段设计的另一个好处是（仅次于多平台）相对于仅支持单一的语言和目标平台，编译器能为更广泛的程序员服务，编译器能为更广大的程序员服务。对于一个开源项目，这意味着有一个更大的的潜在贡献者社区，自然将会促使编译器得到更多的加强和改进。这也是为什么面向很多社区（如GCC）的开源编译器相对于小众编译器（如FreePASCAL），能生成更优化的机器码。这也不像商业编译器那般，性能与预算直接相关。比如，Intel ICC 编译器尽管小众，但以生成高质量代码闻名。
+
+* 三阶段设计的最后一个优势是实现前端所需的技能和实现优化器及后端的技能非常不同。这样的分离能让前端人员更方便的加强和维护编译器的前端部件。虽然这是一个社会问题，不是技术问题，但在实际操作中非常重要，尤其对于那些开源项目，他们竭力想减少贡献障碍。
+
+## 3. 历史
+### Apple使用的编译器历史：
+
+[GCC](https://zh.wikipedia.org/wiki/GCC) → [LLVM-GCC]() → [LLVM Compiler](https://zh.wikipedia.org/wiki/LLVM) 
+
+### 来看看Xcode的版本历史：
+
+> Xcode3之前，用的是GCC；<br/>
+> Xcode3，GCC仍然保留，但是也推出了LLVM，苹果推荐LLVM-GCC混合编译器，但还不是默认编译器； <br/>
+> Xcode4，LLVM-GCC成为默认编译器，但GCC仍保留； <br/>
+> Xcode4.2，LLVM3.0成为默认编译器，纯用GCC不复可能；<br/>
+> Xcode4.6，LLVM升级到4.2版本；<br/>
+> Xcode5，LLVM-GCC被遗弃，新的编译器是LLVM5.0，从GCC过渡到LLVM的时代正式完成。<br/>
+
+### 源头 --- GCC和GDB
+[GCC](https://zh.wikipedia.org/wiki/GCC)（GNU Compiler Collection，GNU编译器套装），是GNU项目的关键部分，是一个很强大的编译器。这个工具被移植到各种系统中，其中就包含了Mac OS X操作系统，并且成为其标准的编译器。这可以反映在Xcode中，Xcode早期的时候用的就是GCC，如果开发iOS比较早的同学肯定能够注意到这点。不仅仅如此，在早期（其实也很长时间，看上面的Xcode版本历史）的Xcode中，调试代码用的一个工具是[GDB](https://en.wikipedia.org/wiki/GNU_Debugger)（GNU Debugger，GNU调试器，是GNU软件系统当中的标准调试器）。它也被移植到Mac OS X系统当中，并且配合GCC作为其除错工具。Xcode早期的话我们在设置断点的时候会看到（gdb）的字样，例如你可以输入`po`打印对象。
+
+Apple（包括中后期的NeXT） 一直使用GCC作为官方的编译器。GCC作为开源世界的编译器标准一直做得不错，但Apple对编译工具会提出更高的要求。
+
+一方面，是Apple对Objective-C语言（甚至后来对C语言）新增很多特性，但GCC开发者并不买Apple的帐——不给实现，因此索性后来两者分成两条分支分别开发，这也造成Apple的编译器版本远落后于GCC的官方版本。另一方面，GCC的代码耦合度太高，不好独立，而且越是后期的版本，代码质量越差，但Apple想做的很多功能（比如更好的IDE支持）需要模块化的方式来调用GCC，但GCC一直不给做。甚至[《GCC运行环境豁免条款 （英文版）》](https://blog.delphij.net/2009/01/gcc.html)从根本上限制了`LLVM-GCC`的开发。 所以，这种不和让Apple一直在寻找一个高效的、模块化的、协议更放松的开源替代品，Chris Lattner的`LLVM`显然是一个很棒的选择。
+
+### [LLVM](https://zh.wikipedia.org/wiki/LLVM) --- 登场
+现在的Xcode，已经完全用的是LLVM了。那么，LLVM是什么？它的命名源自底层虚拟机（Low Level Virtual Machine）的缩写。它是一个编译器的基础建设，是为了任意一种编程语言写成的程序，利用虚拟技术，创造出编译时期，链结时期，运行时期以及“闲置时期”的优化。最早是以C/C++为实现对象，后来支持了Objective-C。LLVM项目由Vikram Adve和Chris Lattner于2000年发起。最初被用来取代GCC stack的代码产生器，许多GCC的前端已经可以与其运行。例如在Xcode的LLVM GCC 4.2编译器时期，核心是LLVM，但是前端是GCC4.2。简单来说，LLVM可以作为多种语言编译器的后台来使用。
+
+刚进入Apple，Chris Lattner就大展身手：首先在Open GL小组做代码优化，把LLVM运行时的编译架在Open GL栈上，这样Open GL栈能够产出更高效率的图形代码。如果显卡足够高级，这些代码会直接扔入GPU执行。但对于一些不支持全部Open GL特性的显卡（比如当时的Intel GMA卡），LLVM则能够把这些指令优化成高效的CPU指令，使程序依然能够正常运行。这个强大的Open GL实现被用在了后来发布的Mac OS X 10.5上。同时，LLVM的链接优化被直接加入到Apple的代码链接器上，而LLVM-GCC也被同步到使用GCC4代码。
+
+LLVM真正的发迹，则得等到 [Mac OS X 10.6 Snow Leopard](https://zh.wikipedia.org/wiki/Mac_OS_X_Snow_Leopard) 登上舞台。可以说， Snow Leopard的新功能，完全得益于LLVM的技术。而这一个版本，也是将LLVM推向真正成熟的重大机遇。Snow Leopard的三项主推技术64位支持、OpenCL以及Grand Central Dispatch (GCD) ，GCD并随后被引入到了iOS 4.0中。而这些需求得以实现，归功于LLVM自身的新前端 --- Clang。
+
+###  [Clang](https://zh.wikipedia.org/wiki/Clang) --- 跳出GCC的桎梏
+LLVM既然可以作为很多语言编译器的后台来使用，自然就引发了一些人为专门的语言开发新的编译器，其中一个最引人注目的就是Chris Lattner自己写的Clang。正像名字所写的那样，Clang(发音为`/ˈklæŋ/`)是一个只支持C、C++、Objective-C和Objective-C++四种C家族编程语言的编译器前端，它的目标就是提供一个GNU编译器套装（GCC）的替代品，这个正是苹果需要的。2007年开始开发，C编译器最早完成，而由于Objective-C相对简单，只是C语言的一个简单扩展，很多情况下甚至可以等价地改写为C语言对Objective-C运行库的函数调用，因此在2009年时，已经完全可以用于生产环境。C++的支持也热火朝天地进行着。
+
+现在的Xcode已经是LLVM + Clang编译器。举个例子，在某个历史Xcode版本(4.x)的编译选项中出现过两种编译器：Apple LLVM compiler 4.2和LLVM GCC 4.2。Apple LLVM compiler 4.2的意思是LLVM编译器，前端用的是Clang。LLVM GCC 4.2的意思则是编译器核心是LLVM，但是前端使用的是GCC4.2编译器。
+
+Clang的加入代表着LLVM真正走向成熟和全能，苹果的开发面也貌焕然一新，从此摆脱了GCC的限制。而Chris Lattner以影响他最大的[龙书](http://en.wikipedia.org/wiki/Dragon_Book_(computer_science))封面为灵感，为项目选定了图标——一条张牙舞爪的飞龙。
+
+### Clang + LLVM --- 唯快不破
+
+* 编译速度快，LLVM+Clang 编译器套件比起GGC有诸多优点，其中最明显的就是编译速度快，这也正是Apple需要的，当时[测试结果](http://119.90.25.37/llvm.org/pubs/2007-07-25-LLVM-2.0-and-Beyond.pdf)表明Clang编译Objective-C代码时速度为GCC的3倍；
+* 内存占用小，而语法树（AST）内存占用使用Clang为被编译源码的1.3倍，而GCC则可以轻易地可以超过10倍；
+* 诊断信息可读性强，对于用户犯下的错误，也能够更准确地给出建议。使用过GCC的同学应该熟悉，GCC给出的错误提示基本都不是给人看的具体例子可参考[LLVM BLOG](http://blog.llvm.org/2010/04/amazing-feats-of-clang-error-recovery.html)。
+* 它还有与GCC兼容，易扩展，易于IDE集成等等优点。
+
+### [LLDB](http://lldb.llvm.org)
+相对于GCC的调试器GDB，LLVM则有一个更强大诊断纠错能力的调试器LLDB。iOS或Mac开发，现在用到的纠错工具就是LLDB。熟悉的同学可以注意到，在设置断点程序跑到断点时，在控制台中就会出现(lldb)字样。没错，就是这么近距离的接触LLDB。为了说LLDB的一个优点，我们先说下GDB的一个限制——“用户界面”。GDB没有一个不错的GUI，默认只有命令行接口（CLI）可用，没那么亲合上手。虽然有几个前端程序为其补强，但还是差强人意。GDB的这个缺点在LLDB上没有，所以LLDB的一个优点就是有一个良好的GUI。
+
+其实LLDB继承了GDB的优点，弥补GDB的不足。iOS开发者从gbd过渡到lldb没有任何不适应感，最直白的原因就是lldb和gdb常用的命令很多都是一样的，例如常用的po等。[The LLDB Debugger](http://lldb.llvm.org/lldb-gdb.html)列举了GDB和LLDB的命令。关于LLDB例子推荐[与调试器共舞 - LLDB 的华尔兹](https://objccn.io/issue-19-2/)
+
+Apple的Mac OS X以及iOS也成了Clang和LLVM的主要试验场——10.6时代，很多需要高效运行的程序比如Open SSL和Hotspot就由LLVM-GCC编译来加速的。而10.6时代的Xcode 3.2诸多图形界面开发程序如Xcode、Interface Builder等，皆由Clang编译。到了Mac OS X 10.7，整个系统的的代码都由Clang或LLVM-GCC编译，参考[LLVM Users](http://llvm.org/Users.html)。
+
+历史就讲到这里，下面我们来看看Objective-C编译的流程。
+
+## 4. 对于Objective-C和Swift源文件编译器的处理过程
+
+### Objective-C
+
+Objecttive-C的本质是其实是C，Clang经过预处理将Objective-C代码转换为C代码（有兴趣的同学可以使用Clang的-rewrite-objc参数生成对应的cpp文件），然后根据C编译的流程将源代码转换成机器码最后打包成可执行文件。
+
+下面用Clang命令我们可以清楚的看到编译器的处理过程：
+
+> clang -ccc-print-phases main.m <br/>
+0: input, "main.m", objective-c <br/>
+1: preprocessor, {0}, objective-c-cpp-output <br/>
+2: compiler, {1}, ir <br/>
+3: backend, {2}, assembler <br/>
+4: assembler, {3}, object <br/>
+5: linker, {4}, image <br/>
+6: bind-arch, "x86_64", {5}, image <br/>
+
+`输入 ` -> `预处理` -> `编译` -> `汇编` -> `链接` -> `输出可执行文件镜像`
+
+#### 预处理
+
+- 符号化 (Tokenization)
+- 宏定义的展开
+- \#import(include) 的展开
+
+#### 编译
+
+- 语法和语义分析
+	- 将符号化后的内容转化为一棵解析树 (parse tree)
+	- 解析树做语义分析
+	- 输出一棵抽象语法树（Abstract Syntax Tree* (AST)）
+- 生成代码和优化
+	- 将 AST 转换为更低级的中间码 (LLVM IR)
+	- 对生成的中间码做优化
+	- 生成特定目标代码
+	- 输出汇编代码
+
+#### 汇编器
+
+- 将汇编代码转换为目标对象文件。
+
+#### 链接器
+
+- 将多个目标对象文件合并为一个可执行文件 (或者一个动态库)
+
+整个Objective-C编译过程如下图所示：
+
+![](/assets/images/2016/08/Objective-C_Process.png)
+
+### Swift
+
+Swift编译过程准确说有两种形式，一种是类似[解释型语言](https://en.wikipedia.org/wiki/Interpreted_language)（又称直译语言，如：LISP、Perl、Python、Ruby、JavaScript）的那种基于解释器的运行方式；还有一种就是在不使用解释器的情况下，直接编译成可执行文件。第一种依赖Swift这个解释器，第二种依赖Swiftc这个编译器前端。关于Swift与Swiftc这两个命令的详细比较参考[Swift & Swiftc](https://dongaxis.github.io/2016/04/28/Swift-Swiftc/)、[Swiftc](http://swiftc.io)、[SWIFT VS SWIFTC](http://owensd.io/blog/swift-vs-swiftc/)
+
+虽然都使用 LLVM 工具链进行编译，但是 Swift 的编译过程相比于 Objective-C 要多一个环节 -- 生成 Swift 中间代码 (Swift Intermediate Language，SIL)。SIL 中包含有很多根据类型假定的转换，这为之后进一步在更低层级优化提供了良好的基础，分析 SIL 也是我们探索 Swift 性能的有效方法。
+
+Swift编译过程如下图所示：
+
+![](/assets/images/2016/08/Swift_Process.png)
+
+## 总结
+
+无论Objective-C还是Swift，编译器的处理逻辑都是按照`前端 - 优化器 - 后端`的三段式设计进行处理。这样不但有增强了灵活性和可扩展性，也给优化某一模块提供了无限的空间，就像当前的Swift一样，虽然是门新语言但在很多方面已经超过了发多年的成熟语言。
+
+![](/assets/images/2016/08/LLVM_Overview.png)
+
+参考文章：<br/>
+[LLVM The Architecture of Open Source Applications](http://www.aosabook.org/en/llvm.html) <br/>
+[Mac OS X 背后的故事（八）三好学生Chris Lattner的LLVM编译工具链](http://history.programmer.com.cn/9436/) <br/>
+[Mach-O 可执行文件](https://objccn.io/issue-6-3/) <br/>
+[Clang命令](http://blog.tingyun.com/web/article/detail/845) <br/>
+[Swift Compiler Architecture](https://swift.org/compiler-stdlib/) <br/>
+[LLVM Developers' Meeting](http://llvm.org/devmtg/) <br/>
+[Swift 2 throws 全解析 - 从原理到实践](http://www.ibm.com/developerworks/cn/mobile/mo-cn-swift/index.html) <br/>
+[Swift 性能探索和优化分析](https://onevcat.com/2016/02/swift-performance/) <br/>
+
