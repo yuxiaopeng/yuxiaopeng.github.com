@@ -1,0 +1,114 @@
+I":<p><img src="/assets/images/2014/02/octopress.png" alt="" /></p>
+
+<h3 id="1添加个人域名">1、添加个人域名</h3>
+
+<p>octopress目录下，执行命令：</p>
+
+<pre><code>echo 'yourdomain.com' &gt;&gt; source/CNAME
+</code></pre>
+
+<p>此命令会在octopress的source目录创建一个名为CNAME的文件文件，内容为<code>yourdomain.com</code>，完成之后，执行如下命令将CNAME部署到github：</p>
+
+<pre><code>rake generate
+git add .
+git commit -am "add CNAME." 
+git push origin source
+rake deploy
+</code></pre>
+
+<p>然后在你的DNS服务商，如 dnspod.cn，添加相应的CNAME指向 <code>yourname.github.com</code>。如果你要使用顶级域名，如 <a href="http://yuxiaopeng.com"><code>http://yuxiaopeng.com</code></a> 访问你的博客，则需要使用A记录指向 <code>204.232.175.78</code>。</p>
+
+<p>详细内容请参考：<a href="http://octopress.org/docs/deploying/github/"><code>Custom Domains</code></a></p>
+
+<h3 id="2安装主题">2、安装主题</h3>
+
+<p>本博使用shashank的greyshade主题，在终端中执行如下命令：</p>
+
+<pre><code>$ git clone git@github.com:shashankmehta/greyshade.git .themes/greyshade
+$ echo "\$greyshade: color;" &gt;&gt; sass/custom/_colors.scss //Substitue 'color' with your highlight color
+$ rake "install[greyshade]"
+$ rake generate
+</code></pre>
+<p>然后，部署到github：</p>
+
+<pre><code>rake generate
+git add .
+git commit -am "install greyshade." 
+git push origin source
+rake deploy
+</code></pre>
+
+<p>详细内容请参考：<a href="https://github.com/shashankmehta/greyshade"><code>greyshade</code></a></p>
+
+<h3 id="3添加多说">3、添加多说</h3>
+
+<ul>
+  <li>获取short_name</li>
+</ul>
+
+<p>去 <a href="http://duoshuo.com"><code>多说网</code></a> 注册账号，并获取站点的short_name</p>
+
+<ul>
+  <li>在_config.yml文件中添加如下内容</li>
+</ul>
+
+<pre><code># duoshuo comments
+duoshuo_comments: true
+duoshuo_short_name: yourname
+</code></pre>
+
+<ul>
+  <li>在source/_layouts/post.html中添加多说评论模块</li>
+</ul>
+
+<pre><code>｛% if site.duoshuo_short_name and site.duoshuo_comments == true and page.comments == true %｝
+  &lt;section&gt;
+    &lt;h1&gt;Comments&lt;/h1&gt;
+    &lt;div id="comments" aria-live="polite"&gt;｛% include post/duoshuo.html %｝&lt;/div&gt;
+  &lt;/section&gt;
+｛% endif %｝
+</code></pre>
+
+<ul>
+  <li>创建source/_includes/post/duoshuo.html，并填入如下内容</li>
+</ul>
+
+<pre><code>&lt;!-- Duoshuo Comment BEGIN --&gt;
+&lt;div class="ds-thread"&gt;&lt;/div&gt;
+&lt;script type="text/javascript"&gt;
+  var duoshuoQuery = {short_name:"{{ site.duoshuo_short_name }}"};
+  (function() {
+    var ds = document.createElement('script');
+    ds.type = 'text/javascript';ds.async = true;
+    ds.src = 'http://static.duoshuo.com/embed.js';
+    ds.charset = 'UTF-8';
+    (document.getElementsByTagName('head')[0] 
+    || document.getElementsByTagName('body')[0]).appendChild(ds);
+  })();
+&lt;/script&gt;
+&lt;!-- Duoshuo Comment END --&gt;
+</code></pre>
+
+<ul>
+  <li>发布到站点</li>
+</ul>
+
+<pre><code>$ rake generate
+$ git add .
+$ git commit -am "添加多说评论" 
+$ git push origin source
+$ rake deploy
+</code></pre>
+
+<h3 id="4添加百度和google统计">4、添加百度和Google统计</h3>
+
+<p>从百度统计获取脚本，然后添加到文件<code>source/_includes/after_footer.html</code>文件中
+从google analytics获取跟踪ID，然后将这个ID添加到<code>_config.yml</code>文件的<code>google_analytics_tracking_id</code>后面即可。</p>
+
+<pre><code># Google Analytics
+google_analytics_tracking_id: UA-457s202x-x
+</code></pre>
+
+<p>持续更新</p>
+
+:ET

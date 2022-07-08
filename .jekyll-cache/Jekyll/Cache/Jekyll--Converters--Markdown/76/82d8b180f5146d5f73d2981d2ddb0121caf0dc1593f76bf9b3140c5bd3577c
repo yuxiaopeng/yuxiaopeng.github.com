@@ -1,0 +1,267 @@
+I"#<p><img src="/assets/images/2014/04/hadoop-elephant_logo.png" alt="" /></p>
+
+<h3 id="1环境准备">1.环境准备</h3>
+
+<ul>
+  <li>三台服务器：CentOS6.5系统，IP地址如下，分别配置hosts：</li>
+</ul>
+
+<pre><code>vi /etc/hosts
+10.2.15.12  master   #NameNode JobTracker
+10.2.15.13  slave1   #DataNode TaskTracker
+10.2.15.14  slave2   #DataNode TaskTracker
+</code></pre>
+
+<ul>
+  <li>JDK安装及Java环境配置</li>
+</ul>
+
+<p>下载 <a href="http://www.oracle.com/technetwork/java/javase/downloads/jdk7-downloads-1880260.html">jdk1.7.0_51</a></p>
+
+<pre><code>tar zxvf  -C /apps/ # 解压到/apps/目录
+chown -R root.root jdk1.7.0_51   # 授权
+vi /etc/profile   # 配置环境变量
+export JAVA_HOME=/apps/jdk1.7.0_51
+export CLASSPATH=.:$JAVA_HOME/jre/lib/rt.jar:$JAVA_HOME/lib/dt.jar:$JAVA_HOME/lib/tools.jar
+export PATH=$PATH:$JAVA_HOME/bin
+source /etc/profile  # 使修改生效
+</code></pre>
+
+<p>更新 alternatives，选择jdk版本</p>
+
+<pre><code>update-alternatives --install /usr/bin/java java /apps/jdk1.7.0_51/bin/java 60
+update-alternatives --config java   # 选择3回车
+</code></pre>
+
+<ul>
+  <li>创建hadoop用户</li>
+</ul>
+
+<pre><code>groupadd hadoop   # 添加组
+useradd -g hadoop -d /home/hadoop hadoop   # 添加用户
+passwd hadoop   # 修改密码
+</code></pre>
+
+<ul>
+  <li>SSH无密码验证配置</li>
+</ul>
+
+<pre><code>mkdir ~/.ssh
+su - hadoop
+cd ~/.ssh
+ssh-keygen -t  rsa       # 一直回车生成密钥
+cat id_rsa.pub &gt;&gt; authorized_keys   # 将公钥id_rsa.pub追加到授权的key里面去
+svervice sshd restart   # 重启SSH服务
+ssh slave1   # ssh到slave1
+mkdir ~/.ssh   # 创建.ssh目录
+ssh slave2   # ssh到slave2
+mkdir ~/.ssh   # 创建.ssh目录
+exit
+exit    # 返回到master
+scp authorized_keys slave1:~/.ssh/   # copy授权key到slave1
+scp authorized_keys slave2:~/.ssh/   # copy授权key到slave2
+vi /etc/ssh/sshd_config   #开启RSA认证
+RSAAuthentication yes
+PubkeyAuthentication yes
+AuthorizedKeysFile      .ssh/authorized_keys
+ssh slave1   # ssh到slave1
+chmod 700 ~/.ssh #目录权限必须设置700
+ssh slave2   # ssh到slave2
+chmod 700 ~/.ssh #目录权限必须设置700
+exit
+exit    # 返回到master
+ssh salve1   # 验证
+exit
+ssh slave2   # 验证
+</code></pre>
+
+<h3 id="2hadoop安装与配置">2.Hadoop安装与配置</h3>
+
+<ul>
+  <li>下载 <a href="http://www.apache.org/dyn/closer.cgi/hadoop/common/">hadoop-2.2.0</a></li>
+</ul>
+
+<pre><code>mkdir /apps/hadoop  # 创建hadoop目录作为安装hadoop的home目录
+tar zxvf hadoop-2.2.0.tar.gz -C /apps/hadoop   # 解压到hadoop目录
+chown hadoop.hadoop -R /home/hadoop/hadoop-2.3.0/   # 授权
+vi /etc/profile   #添加hadoop变量，方便使用，不必每次操作cd到bin目录
+HADOOP_HOME=/home/hadoop/hadoop-2.2.0/
+PATH=$PATH:$HADOOP_HOME/bin:$HADOOP_HOME/sbin
+export HADOOP_HOME PATH
+source /etc/profile   # 生效
+</code></pre>
+
+<ul>
+  <li>修改hadoop-env.sh、yarn-env.sh Hadoop运行的环境变量</li>
+</ul>
+
+<pre><code>vi hadoop-env.sh
+export JAVA_HOME=/apps/jdk1.7.0_51
+vi yarn-env.sh 
+export JAVA_HOME=/apps/jdk1.7.0_51
+</code></pre>
+
+<ul>
+  <li>修改core-site.xml配置文件,主要对NameNode地址端口及系统级别的参数配置，如HDFS URL、Hadoop临时目录以及用于rack-aware集群中的配置文件的配置等。</li>
+</ul>
+
+<pre><code>&lt;configuration&gt;
+	&lt;property&gt;
+    	&lt;name&gt;fs.default.name&lt;/name&gt;
+     	&lt;value&gt;hdfs://master:9000/&lt;/value&gt;
+     	&lt;description&gt;The name of the default file system. A URI whose scheme and authority determine the FileSystem implementation. The uri's scheme determines the config property (fs.SCHEME.impl) naming the FileSystem implementation class. The uri's authority is used to determine the host, port, etc. for a filesystem.&lt;/description&gt;
+	&lt;/property&gt;
+    &lt;property&gt;
+    	&lt;name&gt;io.file.buffer.size&lt;/name&gt;
+        &lt;value&gt;131072&lt;/value&gt;
+	&lt;/property&gt;
+    &lt;property&gt;
+        &lt;name&gt;hadoop.tmp.dir&lt;/name&gt;
+        &lt;value&gt;/apps/hadoop/tmp&lt;/value&gt;
+        &lt;description&gt;A base for other temporary directories.&lt;/description&gt;
+    &lt;/property&gt;
+    &lt;property&gt;
+        &lt;name&gt;hadoop.proxyuser.hduser.hosts&lt;/name&gt;
+        &lt;value&gt;*&lt;/value&gt;
+    &lt;/property&gt;
+    &lt;property&gt;
+        &lt;name&gt;hadoop.proxyuser.hduser.groups&lt;/name&gt;
+        &lt;value&gt;*&lt;/value&gt;
+    &lt;/property&gt;
+&lt;/configuration&gt;
+</code></pre>
+
+<ul>
+  <li>修改hdfs-site.xml配置文件，主要对HDFS相关属性的配置，如文件副本的个数、块大小及是否使用强制权限等。</li>
+</ul>
+
+<pre><code>&lt;configuration&gt;
+	&lt;property&gt;
+    	&lt;name&gt;dfs.namenode.name.dir&lt;/name&gt;
+        &lt;value&gt;file://${hadoop.tmp.dir}/dfs/name&lt;/value&gt;
+    &lt;/property&gt;
+    &lt;property&gt;
+        &lt;name&gt;dfs.datanode.data.dir&lt;/name&gt;
+        &lt;value&gt;file://${hadoop.tmp.dir}/dfs/data&lt;/value&gt;
+    &lt;/property&gt;
+    &lt;property&gt;
+        &lt;name&gt;hadoop.tmp.dir&lt;/name&gt;
+        &lt;value&gt;/apps/hadoop/hdfs/tmp/&lt;/value&gt;
+    &lt;/property&gt;
+    &lt;property&gt;
+        &lt;name&gt;dfs.replication&lt;/name&gt;   #数据副本数量，默认3，我们是两台设置2
+        &lt;value&gt;2&lt;/value&gt;    
+    &lt;/property&gt;
+    &lt;property&gt;
+        &lt;name&gt;dfs.webhdfs.enabled&lt;/name&gt;
+        &lt;value&gt;true&lt;/value&gt;
+     &lt;/property&gt;
+&lt;/configuration&gt;
+</code></pre>
+
+<ul>
+  <li>修改mapred-site.xml MapReduce配置文件，主要对JobTracker地址及端口的配置。</li>
+</ul>
+
+<pre><code>&lt;configuration&gt;
+	&lt;property&gt;
+    	&lt;name&gt;mapreduce.framework.name&lt;/name&gt;
+        &lt;value&gt;yarn&lt;/value&gt;
+    &lt;/property&gt;
+    &lt;property&gt;
+    	&lt;name&gt;mapreduce.jobhistory.address&lt;/name&gt;
+        &lt;value&gt;master:10020&lt;/value&gt;
+    &lt;/property&gt;
+    &lt;property&gt;
+        &lt;name&gt;mapreduce.jobhistory.webapp.address&lt;/name&gt;
+        &lt;value&gt;master:19888&lt;/value&gt;
+    &lt;/property&gt;
+&lt;configuration&gt;
+</code></pre>
+
+<ul>
+  <li>修改slaves配置文件，slaves主机列表，可以是alias或IP地址。</li>
+</ul>
+
+<pre><code>slave1
+slave2
+</code></pre>
+
+<ul>
+  <li>修改yarn-site.xml配置文件，yarn地址及端口信息配置。</li>
+</ul>
+
+<pre><code>&lt;configuration&gt;
+	&lt;property&gt;
+		&lt;name&gt;yarn.resourcemanager.address&lt;/name&gt;
+		&lt;value&gt;master:8032&lt;/value&gt;
+	&lt;/property&gt;
+	&lt;property&gt;
+		&lt;name&gt;yarn.resourcemanager.scheduler.address&lt;/name&gt;
+		&lt;value&gt;master:8030&lt;/value&gt;
+	&lt;/property&gt;
+	&lt;property&gt;
+		&lt;name&gt;yarn.resourcemanager.resource-tracker.address&lt;/name&gt;
+		&lt;value&gt;master:8031&lt;/value&gt;
+	&lt;/property&gt;
+	&lt;property&gt;
+		&lt;name&gt;yarn.resourcemanager.admin.address&lt;/name&gt;
+		&lt;value&gt;master:8033&lt;/value&gt;
+	&lt;/property&gt;
+	&lt;property&gt;
+		&lt;name&gt;yarn.resourcemanager.webapp.address&lt;/name&gt;
+ 		&lt;value&gt;master:8088&lt;/value&gt;
+	&lt;/property&gt;
+	&lt;property&gt;
+		&lt;name&gt;yarn.nodemanager.aux-services&lt;/name&gt;
+		&lt;value&gt;mapreduce_shuffle&lt;/value&gt;
+	&lt;/property&gt;
+ 	&lt;property&gt;
+ 		&lt;name&gt;yarn.nodemanager.aux-services.mapreduce.shuffle.class&lt;/name&gt;
+ 		&lt;value&gt;org.apache.hadoop.mapred.ShuffleHandler&lt;/value&gt;
+ 	&lt;/property&gt;
+&lt;/configuration&gt;
+</code></pre>
+
+<pre><code>scp hadoop slave1:~/apps/   # 复制到其他节点slave1、slave2
+scp hadoop slave2:~/apps/
+</code></pre>
+
+<font color="red" size="1"> 注意：只需要原样复制即可，不必改动上面的xml配置文件。 </font>
+
+<h3 id="3启动关闭与验证">3.启动关闭与验证</h3>
+
+<ul>
+  <li>启动与关闭</li>
+</ul>
+
+<pre><code>hdfs namenode -format    # 格式化HDFS
+start-dfs.sh    # 启动HDFS文件系统
+jps   # 检查守护进程是否启动
+start-yarn.sh   # 启动新mapreduce架构
+jps   # 检查守护进程是否启动
+start-all.sh    # 也可通过star-all.sh启动所有进程
+stop-all.sh     # 关闭所有进程
+hdfs dfsadmin -report   # 查看集群状态
+</code></pre>
+
+<ul>
+  <li>浏览器中查看</li>
+</ul>
+
+<p><a href="http://master:8088/">http://master:8088</a>        #通过web查看资源</p>
+
+<p><a href="http://master:50070/">http://master:50070</a>     # 查看HDFS状态</p>
+
+<ul>
+  <li>验证集群计算，执行Hadoop自带的examples，执行如下命令：</li>
+</ul>
+
+<pre><code>bin/hadoop jar share/hadoop/mapreduce/hadoop-mapreduce-examples-2.2.0.jar randomwriter out
+</code></pre>
+
+<p>至此，Hadoop的集群已经搭建完成，以上内容主要参考<a href="http://hadoop.apache.org"><code>Apache Hadoop</code></a>官网！</p>
+
+<p>详细配置请参考：<a href="http://hadoop.apache.org/docs/current/hadoop-project-dist/hadoop-common/ClusterSetup.html"><code>Hadoop Cluster Setup</code></a></p>
+
+:ET

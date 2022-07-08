@@ -1,0 +1,56 @@
+I"�<h3 id="内存模型">内存模型</h3>
+
+<h3 id="isa指针">isa指针</h3>
+<p>在Objective-C语言的内部，每一个对象都有一个名为isa的指针，指向该对象的类。每一个类描述了一系列它的实例的特点，包括成员变量的列表，成员函数的列表等。每一个对象都可以接受消息，而对象能够接收的消息列表是保存在它所对应的类中。关于isa指针详细内容推荐巧哥的 <a href="http://blog.devtang.com/blog/2013/10/15/objective-c-object-model/"><code>Objective-C对象模型及应用</code></a> 介绍的非常到位并且包含实际应用场景。</p>
+
+<h3 id="堆内存">堆内存</h3>
+<p>    <strong>堆</strong>（heap）是指内存中的一块区域，应用中的所有对象都会保存在堆中。当应用向某个类发送alloc消息时，系统会从堆中分配出一块内存，其大小足够存放相应对象的全部实例变量。</p>
+
+<pre><code>//
+//  Person.h
+//  MemoryManagement
+//
+//  Created by 小鹏 on 14/07/04.
+//  Copyright (c) 2014年 ROC. All rights reserved.
+//
+
+#import &lt;Foundation/Foundation.h&gt;
+
+@interface Person : NSObject
+
+@property (nonatomic, copy) NSString *name;
+@property (nonatomic) int age;
+@property (nonatomic, readonly) NSDate *birthday;
+
+@end
+</code></pre>
+
+<p>    一个对象永远不会直接保存另一个对象，所有的对象在堆中都是独立存在的。如果需要，一个对象可以保存指向其他对象的引用，即可以将其他对象的地址赋给指针实例变量。</p>
+
+<p>    Person实例包含5个实例变量，其中3个为指针变量（isa、name、birthday），另一个为int变量（age）。一个int变量会占用4个字节的内存，所以一个Person实例总共会占用16个字节的内存空间，如下图：</p>
+
+<p><img src="/assets/images/2014/07/Person_In_Memory_Size.png" /></p>
+
+<h3 id="栈内存">栈内存</h3>
+<p>    <strong>栈</strong>（stack）是指内存中的另一块区域，和堆是分开的。为这两类内存区域分别取名堆和栈，是为了能够形象地描述这两个概念。堆，包含了大量无序的对象，需要通过指针来保存这些对象在堆中的地址。栈，则会按后进先出（LIFO）的规则保存一组<strong>帧</strong>（frame）。  <br />
+    当程序执行某个方法（或函数）时，会从栈中分配一块内存空间，这块内存空间称为栈帧。栈帧负责保存程序在方法内声明的变量的值。在方法内声明的变量称为<strong>局部变量</strong>（local variable）。  <br />
+    当某个应用启动并运行<code>main</code>函数时，它的栈帧会被保存在栈的底部。当<code>main</code>调用另一个方法（或函数）时，这个方法（或函数）的栈帧会压入栈的顶部。被调用的方法还可以再调用其他方法，依此类推，最终会在栈中形成一个塔状的栈帧序列 。当被调用的方法（或函数）结束时，程序会将其从栈帧中“弹出”并释放。如果同一个方法再次被调用，则应用会创建一个全新的的栈帧，并将其压入栈的顶部。如图：  <br />
+<img src="/assets/images/2014/07/Person_Method_Stack.png" /></p>
+
+<h3 id="对象所有权">对象所有权</h3>
+<p>指针变量暗含了对其所指向的对象的<strong>所有权</strong>（Ownership）。</p>
+
+<ul>
+  <li>当某个方法（或函数）有一个指向某个对象的局部变量时，可以称该方法拥有（own）该变量所指向的对象。</li>
+  <li>当某个对象有一个指向其他对象的实例变量时，可以称该对象拥有相应指针所指向的对象。</li>
+</ul>
+
+<p>以下情况会使对象失去拥有方：</p>
+
+<ul>
+  <li>当程序修改某个指向特定对象的变量，将其指向另一个对象时。</li>
+  <li>当程序将某个指向对象的变量设置为nil时。</li>
+  <li>当程序释放某个指向特定对象的变量时。</li>
+</ul>
+
+:ET

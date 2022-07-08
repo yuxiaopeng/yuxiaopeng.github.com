@@ -1,0 +1,70 @@
+I"M<p><img src="/assets/images/2013/11/octopress-logo.png" alt="" /></p>
+
+<h3 id="大家好我是roc欢迎大家关注我的小站">大家好，我是Roc，欢迎大家关注我的小站！</h3>
+
+<p><code>博客</code>-&gt;<code>托管博客</code>-&gt;<code>wordpress</code>-&gt;<code>octopress</code><br />建博后第一篇文章，就说说创建这个Blog的过程吧。最初接触博客这个概念是在2007年左右，那时候网吧很流行，而去网吧能干的事无非是玩游戏、聊QQ、浏览网页，我不是一个对游戏能够痴迷的人，浏览网页的过程中发现了51，后来才知道这不是偶然，51在一线城市可能没多少人用，但三线及以下城市很多人用51。在51你会发现博客中展示更多的不是文章而是照片，用户中多半是年轻女性，这可能是51抓住了年轻女性喜欢展示自己漂亮照片的心理。51让我知道了博客这个概念，后来陆陆续续使用了Blogger、新浪博客、搜狐博客、博客中国、QQ空间等。2010年左右经常逛一些技术论坛，知道了独立博客的概念，区别于托管博客，独立博客有自己的空间、域名，更自由、灵活，不受限制，典型代表是wordpress。于是研究之，中间搭建过几个博客，也尝试自己做过wordpress主题，但这也只是对wordpress的相关技术的了解，并没有利用到它强大的文章功能，这也是不能坚持写博客的原因。2012年认识了Github，经常去Fork一些代码学习，后来知道了Page,发现竟然有如此强大的博客系统,最终在2013年初创建了这个博客，拖到现在才写了这第一篇文章。下面是我创建博客的过程：</p>
+
+<h3 id="搭建octopress">搭建Octopress</h3>
+
+<h3 id="1安装-ruby">1.安装 ruby</h3>
+<p>下载地址: <a href="http://rubyforge.org/frs/?group_id=167"><code>RubyInstaller</code></a>，最新版本 rubyinstaller-1.9.3-p429.exe，注意版本是1.9.3。</p>
+<h3 id="2安装-gem">2.安装 gem</h3>
+<p>下载地址: <a href="http://rubyinstaller.org/downloads/"><code>gem</code></a>，与1.9.3对应版本为 DevKit-tdm-32-4.5.2-20111229-1559-sfx.exe，解压到D:/DevKit,cmd中执行：</p>
+
+<pre><code>cd D:\DevKit
+ruby dk.rb init
+ruby dk.rb instal
+</code></pre>
+
+<h3 id="3安装-python">3.安装 python</h3>
+<p>下载地址：<a href="http://www.activestate.com/activepython/downloads"><code>activepython</code></a> ，安装2.7版，博客代码加亮模块需要python环境的支持，安装完以后，在win的cmd窗口中执行：</p>
+
+<pre><code>easy_install pygments
+</code></pre>
+
+<p>win7环境变量：<br />
+LANG=zh_CN.UTF-8
+LC_ALL=zh_CN.UTF-8</p>
+
+<p>更新gem源:<br /></p>
+
+<pre><code>gem sources --remove http://rubygems.org/
+gem sources -a http://ruby.taobao.org/
+gem sources -l
+</code></pre>
+
+<p>注意 ：请确保只有 http://ruby.taobao.org/ 唯一一个条目</p>
+
+<p>安装 rdoc 和 bundler:<br />
+gem install rdoc bundler</p>
+<h3 id="4安装-octopress">4.安装 Octopress</h3>
+
+<pre><code>git clone git://github.com/imathis/octopress.git octopress
+bundle install
+rake install
+</code></pre>
+
+<h3 id="5发布到github-pages">5.发布到github pages</h3>
+<p>与github建立连接:</p>
+
+<pre><code>rake setup_github_pages
+</code></pre>
+
+<p>按照提示输入 github page repository的url地址，例如：git@github.com:yuxiaopeng/yuxiaopeng.github.com.git</p>
+
+<p>生成静态页面:</p>
+
+<pre><code>rake generate
+</code></pre>
+
+<p>本地预览，访问 http://localhost:4000 查看博客本地运行效果:</p>
+
+<pre><code>rake preview
+</code></pre>
+
+<p>部署到github 服务器：</p>
+
+<pre><code>rake deploy
+</code></pre>
+
+:ET

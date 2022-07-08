@@ -1,0 +1,85 @@
+I"w<h3 id="1什么是委托模式delegation">1.什么是委托模式（Delegation）</h3>
+<p>委托是指给一个对象提供机会对另一个对象中的变化做出反应或者影响另一个对象的行为。即有两个对象参与处理同一个请求，接受请求的对象将请求委托给另一个对象来处理。其基本思想是：两个对象协同解决问题。一个对象非常普通，并且打算在广泛的情形中重用。它存储指向另一个对象（即它的委托）的引用，并在关键时刻给委托发消息。消息可能只是通知委托发生了某件事情，给委托提供机会执行额外的处理，或者消息可能要求委托提供一些关键的信息以控制所发生的事情。委托模式是一项基本技巧，许多其他的模式，如状态模式、策略模式、访问者模式本质上是在更特殊的场合采用了委托模式。委托模式使得我们可以用聚合来替代继承。</p>
+
+<p>在Cocoa中，委托是一种很常见的设计模式，很多类者有delegate属性。</p>
+
+<p>委托是一种面向对象的<strong>回调</strong>（callbacks）机制。传统意义上的回调是指在某个特定事件发生前就设置好的函数。当相应的事件发生时，程序就会调用该函数。某些对象需要为多个事件设置回调。以CLLocationManager对象为例，当该对象发现新的位置，或者发生错误时都会使用回调。</p>
+
+<p>Objective-C没有内建的机制能让两个或多个回调函数协同工作并分享信息。委托解决了这个问题：单个委托对象可以接收针对某个特定对象的全部事件消息。委托对象可以根据需要，保存、修改、使用和转发相关的信息。</p>
+
+<p>下面用通俗的话说说委托模式是干什么用的。实际上Objective-C中的委托模式，类似于Java中的回调机制，或者说监听器机制。也类似JavaScript语言里面的onclick事件和函数的作用。比如要实现点击一个按钮之后做什么事情，这里有一个视图类和一个控制器类，无论你是使用什么语言和开发工具。视图类能知道用户什么时候点击了按钮，但是不知道点击了以后做什么；控制类知道点击按钮后做什么，而不知道何时用户会点击。那么，可以将控制类委托给视图类，当点击的时候视图类调用控制类。</p>
+
+<p>如果使用过Java的Swing等做本地图形界面开发，应该知道在视图类中包含了大量的（匿名）内部类，或者叫注册监听器，这些机制起到和Objective-C委托类似的功效。可以这样理解：监听器、（匿名）内部类是实现怎么做的部分，但是不知道何时会发生事情；视图类是实何时响应事件的部分，在事件发生时调用监听器或（匿名）内部类。</p>
+
+<p>写个简单的示例，是在main方法里写的，模拟一下委托在视图和控制中的作用。这里面，我有一个屏幕（Screen）类，就把它当视图吧。需求是当点击屏幕的时候爆炸。那么我有个动作（Action）类，它会实现爆炸动作。</p>
+
+<p>委托方法通常包括3种动词：should、will、did。</p>
+
+<p>should表示一个动作发生前，通常带有返回值，可以在动作发生之前改变对象状态。
+will在动作发生前，委托可以对动作做出响应，但不带有返回值。
+did在动作发生后做出的响应。</p>
+
+<p>从方法的定义我们不难看出委托模式能够起到两方面的作用：</p>
+
+<p>第一：委托协助对象主体完成某项操作，将需要定制化的操作通过委托对象来自定义实现，达到和子类化对象主体同样的作用。
+第二：事件监听，委托对象监听对象主体的某些重要事件，对事件做出具体响应或广播事件交给需要作出响应的对象。</p>
+
+<p>个人理解采用委托模式的好处在于：</p>
+
+<p>1、避免子类化带来的过多的子类以及子类与父类的耦合
+2、通过委托传递消息机制实现分层解耦</p>
+
+<p>委托模式的实现思路：</p>
+
+<p>1、通常是在对象主体包含一个委托对象的弱引用：</p>
+
+<p>2、委托对象的实现有两种方式：正式协议和非正式协议，对象主体在协议中定义委托方法，委托对象可以选择实现其中某些委托方法，因此如果通过正式协议定义委托方法需要使用@option。
+3、连接对象主体和委托，无非就是通过setDelegate:(id)obj来实现。</p>
+
+<p>4、触发委托方法。</p>
+
+<h3 id="2什么是协议protocol">2.什么是协议（protocol）</h3>
+
+<p>凡是支付委托的对象，其背后都有一个相应的协议，声明可以向该对象的委托对象发送的消息。委托对象需要根据这个协议，为其“感兴趣”的事件实现相应的方法。如果某个类实现了某个协议中的方法，就称这个类遵守（conform）该协议。</p>
+
+<p>针对CLLocationManager的委托对象，相应的协议部分示例代码如下：</p>
+
+<pre><code>@protocol CLLocationManagerDelegate &lt;NSObject&gt;
+
+@optional
+
+- (void)locationManager:(CLLocationManager *)manager
+	didUpdateToLocation:(CLLocation *)newLocation
+		   fromLocation:(CLLocation *)oldLocation;
+		   
+- (void)locationManager:(CLLocationManager *)manager
+       didUpdateHeading:(CLHeading *)newHeading;
+       
+- (BOOL)locationManagerShouldDisplayHeadingCalibration:(CLLocationManager *)manager;
+
+- (void)locationManager:(CLLocationManager *)manager
+	didEnterRegion:(CLRegion *)region;
+	
+- (void)locationManager:(CLLocationManager *)manager
+	didFailWithError:(NSError *)error;
+@end
+
+</code></pre>
+
+<p>协议不是类，只是一组方法。不能为协议创建实例，或者添加实例变量。协议自身不实现方法，需要由遵守相应协议的类来实现。用于委托的协议称为委托协议（delegate protocols）。</p>
+
+<h3 id="3目标-动作与委托">3.目标-动作与委托</h3>
+<p>目标-动作（target-action）是一另外一种面向对象的回调模式。其工作方式为：当某个特定的事件发生（如按下按钮）时，发生事件的一方向指定的目标对象发送一个之前设置好的动作消息。针对不同的事件（例如轻按、连按或按住不放），需要创建不同的目标-动作。使用委托时，只要设置一个委托对象，就可以向该对象发送不同的事件消息。委托对象要为其“关心”的每一个事件实现相应的方法，如下图：  <br />
+<img src="/assets/images/2014/07/delegate_target_action.png" /></p>
+
+<p>代码编写有个这样的原则：能不用继承就不用继承，能使用委托实现的就不使用继承。两个类有明显示的层级关系时使用继承，没有明显的层级关系，仅仅是为了在一个类中使用另一个类的方法时应该使用委托。
+根据《重构》一书称：现在有滥用继承的趋势，JDK 中 Stack 就是一个滥用继承的典型！
+java.util.Stack 继承自 java.util.Vector，其实 Stack 与 Vector 在用途上完全是风马牛不相及的两个容器。</p>
+
+<p>参考：
+http://developer.apple.com/library/ios/#documentation/General/Conceptual/DevPedia-CocoaCore/Delegation.html</p>
+
+<p>http://developer.apple.com/library/ios/#documentation/Cocoa/Conceptual/CocoaFundamentals/CommunicatingWithObjects/CommunicateWithObjects.html#//apple_ref/doc/uid/TP40002974-CH7-SW18
+<a href="http://en.wikipedia.org/wiki/Delegation_pattern"><code>Delegation pattern</code></a></p>
+
+:ET
