@@ -7,9 +7,6 @@ creator: <a href="http://yuxiaopeng.com">@yuxiaopeng</a>
 
 url: "http://yuxiaopeng.com"
 
-plugins:
-  - jekyll-sitemap
-
 permalink: /:year/:month/:title/
 
 # Format
@@ -28,7 +25,13 @@ nav:
     #- {title: 订阅, description: 邮件订阅本站, url: ''}
 
 # Pagination
-gems: [jekyll-paginate]
+# gems: [jekyll-paginate, jekyll-sitemap]
+# gems: [jekyll-paginate]
+
+plugins:
+  - jekyll-sitemap
+  - jekyll-paginate
+
 paginate: 10
 paginate_path: "page/:num/"
 
@@ -46,3 +49,5 @@ social:
 ga:
     id: G-BKWQZCSQSR
     host: yuxiaopeng.com
+
+google_site_verification: dqGXEMIQ2rahcxMSJyuHTJrT7HnM-2GelLot-WIcqck
