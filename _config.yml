@@ -7,6 +7,9 @@ creator: <a href="http://yuxiaopeng.com">@yuxiaopeng</a>
 
 url: "http://yuxiaopeng.com"
 
+plugins:
+  - jekyll-sitemap
+
 permalink: /:year/:month/:title/
 
 # Format
