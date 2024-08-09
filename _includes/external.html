@@ -14,4 +14,10 @@
     ga('create', '{{site.ga.id}}', '{{site.ga.host}}');
     ga('send', 'pageview');
 </script>
+
+<script type="text/javascript">
+    $.get( "https://api.unsplash.com/photos/random/?client_id=0fd4f1013104a5dd8f4eeb8fcd8025e49b0ccc6d0c0cc094e030ae10e7591c53", function( data ) {
+      document.getElementById("background-image-panel").style.backgroundImage = "url(" + data.urls.small + ")";
+    });
+  </script>
 {% endif %}
